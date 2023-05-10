@@ -25,4 +25,18 @@ https://robodk.com/doc/en/Robots-Universal-Robots-How-load-Script-file.html
 
 # Gripper Control
 https://github.com/castetsb/pyRobotiqGripper
--> No answear
+-> No answear error is solved by minimalmodbus setting: https://dof.robotiq.com/discussion/92/controlling-the-robotiq-2-finger-gripper-with-modbus-commands-in-python?_ga=2.17431289.1133307955.1542044765-1547192274.1535646624
+
+# Installation
+## CRI
+```
+$ cd cri
+$ pip3 install -e .
+$ python setup.py install
+```
+
+## pyRobotiqGripper
+```
+$ pip3 install minimalmodbus
+```
+
