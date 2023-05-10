@@ -1,8 +1,13 @@
+# FTDI driver for arm64 mac/linux is not supported.
+-> Use intel Linux computer instead.
+
 # To Start
 - Connect dock before launching Ubuntu VM. (Network will be connected to mac)
 - Launch VM.
 - Plug off and on USBs on dock, and select VM to be connected.
+
 or
+
 - Launch VM
 - Plug off usbs on dock
 - Connect dock to laptop
