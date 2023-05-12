@@ -14,7 +14,7 @@ np.set_printoptions(precision=2, suppress=True)
 
 def main():
     base_frame = (0, 0, 0, 0, 0, 0)
-    work_frame = (800, -330.0, 341.3, 180, 0, 0)    # base frame: x->right, y->back, z->up
+    work_frame = (800, -330.0, 341.3, 180, 0, -90)    # base frame: x->right, y->back, z->up
     #work_frame = (487.0, -109.1, 341.3, 180, 0, 180)    # base frame: x->front, y->right, z->up
     
     with AsyncRobot(SyncRobot(RTDEController(ip='192.168.1.141'))) as robot:
