@@ -39,6 +39,7 @@ g = 9.80665
 # Variable to store weight
 weight = 0
 
+# Warm up process for FT sensor. 1.5h is recommended.
 def ft_warmup(minutes=5, show=False):
     
     sec = minutes * 60
@@ -72,6 +73,7 @@ def ft_warmup(minutes=5, show=False):
                 realtime_plot1d.update(weight)
 
 
+# get weight and save it into CSV file on subprocess
 def get_weight(fts):
     print("Subprocess started.")
     global weight 
@@ -108,6 +110,7 @@ def main():
     realtime_plot1d = RealtimePlot1D(x_tick, length)
 
     ft_thread = threading.Thread(target=get_weight, args=(fts,))
+    ft_thread.setDaemon(True)
     ft_thread.start()
 
     global weight
