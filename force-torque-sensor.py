@@ -25,7 +25,7 @@ class ATI_readings:
         self.gainIndex = kwargs['gainIndex']
         self.settlingFactor = kwargs['settlingFactor']
         self.differential = kwargs['differential']
-        self.daq_device = u6.U6()
+        self.daq_device = u6.U6(autoOpen = True, serial= kwargs['serial'])
         self.daq_device.getCalibrationData()
         self.rawData = []
         self.forces = []
@@ -37,6 +37,7 @@ class ATI_readings:
         self.margin = 0.1  # current threshold: 10grams
         self.GR_flag = 0  # to cehck if we are grabbing or releasing
         self.bias = [-0.28026725005202024, -0.5628451798374954, 0.36969605272634, -0.021619200849272602, -0.1790193724709752, 0.2219047680659969]
+        
 
     def __str__(self):
         printOut = '''
@@ -228,7 +229,8 @@ Execute
 """
 if __name__ == '__main__':
     # ft setup
-    ati_ft = ATI_readings(resolutionIndex=1, gainIndex=0, settlingFactor=0, differential=True)
+    ati_ft = ATI_readings(resolutionIndex=1, gainIndex=0, settlingFactor=0, differential=True, serial=360022506) # weight:360022506, in-whist:360023125
+    #print(ati_ft.daq_device.configU6())
     print("Checking F/T sensor:")
     print(ati_ft.__str__())
 

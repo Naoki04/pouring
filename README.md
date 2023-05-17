@@ -49,3 +49,5 @@ $ pip3 install minimalmodbus
 ## LabJackPython
 -> a bit complex.
 
+#! ATI-Readings in force-torque-sensor.py is amended to treat multiple FT sensors identified by serial number.
+

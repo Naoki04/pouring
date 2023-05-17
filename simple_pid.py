@@ -9,6 +9,7 @@ import binascii
 import numpy as np
 from tqdm import tqdm
 import threading
+import csv
 
 
 from cri.robot import SyncRobot, AsyncRobot
@@ -43,55 +44,75 @@ def ft_warmup(minutes=5, show=False):
     sec = minutes * 60
 
     # ft setup
-    ati_ft = ATI_readings(resolutionIndex=1, gainIndex=0, settlingFactor=0, differential=True)
-    print("Checking F/T sensor:")
-    print(ati_ft.__str__())
-    ati_ft.calibration()  # output
+    ati_fts = [ATI_readings(resolutionIndex=1, gainIndex=0, settlingFactor=0, differential=True, serial=360022506),
+               ATI_readings(resolutionIndex=1, gainIndex=0, settlingFactor=0, differential=True, serial=360023125)]  # weight:360022506, in-whist:360023125))
+    for ati_ft in ati_fts:
+        print(ati_ft.__str__())
+        ati_ft.calibration()  # output
+    
     start_t = time.time()
 
-    if show == True:
+    ati_ft = ati_fts[0]
+
+    if show >= 1:
         # Graph
         x_tick = 1  # 時間方向の間隔
         length = sec*6  # プロットする配列の要素数
         realtime_plot1d = RealtimePlot1D(x_tick, length)
+        ati_ft = ati_fts[show-1]
     
     previous_time = time.time()
     with tqdm(total=sec) as pbar:
         while time.time() - start_t < sec:
             ati_ft.get_weight()
-            weight = -ati_ft.forces[2] / g * 1000  # g
             pbar.update(time.time() - previous_time)
             previous_time = time.time()
-            if show == True:
+            if show >= 1:
+                weight = -ati_ft.forces[2] / g * 1000  # g
                 realtime_plot1d.update(weight)
 
-def get_weight(ati_ft):
+
+def get_weight(fts):
     print("Subprocess started.")
-    
     global weight 
-    while True:
-        ati_ft.get_weight()
-        weight = -ati_ft.forces[2] / g * 1000  # g
+
+    csv_path = "data/csv/" + time.strftime("%Y%m%d_%H%M%S") + ".csv"
+    
+
+    with open(csv_path, 'w', newline='') as file:
+        writer = csv.writer(file)
+        #print(["timestamp", str(fts[0].daq_device.configU6()["SerialNumber"])+"(g)", str(fts[1].daq_device.configU6()["SerialNumber"])+"(g)"])
+        writer.writerow(["timestamp", str(fts[0].daq_device.configU6()["SerialNumber"])+"(g)", str(fts[1].daq_device.configU6()["SerialNumber"])+"(g)"])
+        while True:
+            fts[0].get_weight()
+            fts[1].get_weight()
+            weight = -fts[0].forces[2] / g * 1000  # g
+            writer.writerow([time.time(), fts[0].forces/g*1000, fts[1].forces/g*1000])
+            
         #realtime_plot1d.update(weight)
         #print(weight)
 
 def main():
-    # ft setup
-    ati_ft = ATI_readings(resolutionIndex=1, gainIndex=0, settlingFactor=0, differential=True)
-    print("Checking F/T sensor:")
-    print(ati_ft.__str__())
-    ati_ft.calibration()  # output
+    # FT Setup
+    ati_ft_weight = ATI_readings(resolutionIndex=1, gainIndex=0, settlingFactor=0, differential=True, serial=360022506) # weight:360022506, in-whist:360023125)
+    ati_ft_inwhist = ATI_readings(resolutionIndex=1, gainIndex=0, settlingFactor=0, differential=True, serial=360023125) # weight:360022506, in-whist:360023125)
+    fts = [ati_ft_weight, ati_ft_inwhist]
+    for ati_ft in fts:
+        print("Checking F/T sensor:", ati_ft.daq_device.configU6()["SerialNumber"])
+        print(ati_ft.__str__())
+        ati_ft.calibration()  # output
 
     # Graph
     x_tick = 1  # 時間方向の間隔
     length = 100  # プロットする配列の要素数
     realtime_plot1d = RealtimePlot1D(x_tick, length)
 
-    ft_thread = threading.Thread(target=get_weight, args=(ati_ft,))
+    ft_thread = threading.Thread(target=get_weight, args=(fts,))
     ft_thread.start()
 
     global weight
 
+    # Robot setup
     base_frame = (0, 0, 0, 0, 0, 0)
     work_frame = (800, -345, 302, 180, 0, -90)     # base frame: x->right, y->back, z->up # Corner of the box
     #work_frame = (487.0, -109.1, 341.3, 180, 0, 180)    # base frame: x->front, y->right, z->up
@@ -227,9 +248,10 @@ def main():
         robot.move_linear((0, 0, 0, 0, 0, 0))
         time.sleep(100)
         return 0
+    
         
 
      
 if __name__ == '__main__':
-    #ft_warmup(minutes=10,show=1)
+    #ft_warmup(minutes=2,show=2) #1h~2h(1.5h) # show=0:don't show, show=1:show weight, show=2:show inwhist
     main()
