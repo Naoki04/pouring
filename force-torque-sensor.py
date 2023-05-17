@@ -123,8 +123,8 @@ class ATI_readings:
             checks += 1
         self.bias = numpy.mean(rawData_array, axis=0)
         self.calibration_flag = 1
-        print("Calibration is done!")
-        print("Bias is: ", self.bias)
+        #print("Calibration is done!")
+        #print("Bias is: ", self.bias)
 
 
 """
