@@ -19,6 +19,7 @@ from robotiqGripper import RobotiqGripper
 import importlib
 ftsensor = importlib.import_module("force-torque-sensor")
 ATI_readings = ftsensor.ATI_readings
+userAxis_FT35016 = ftsensor.userAxis_FT35016
 
 
 theta_min = -90
@@ -28,7 +29,7 @@ csv_path = "data/csv/" + time.strftime("%Y%m%d_%H%M%S") + "inwhist_calibration.c
 
 def main():
     # Inwhist FTsensor setup
-    ati_ft = ATI_readings(resolutionIndex=1, gainIndex=0, settlingFactor=0, differential=True, serial=360023125) # weight:360022506, in-whist:360023125)
+    ati_ft = ATI_readings(resolutionIndex=1, gainIndex=0, settlingFactor=0, differential=True, serial=360023125, userAxis=userAxis_FT35016) # weight:360022506, in-whist:360023125)
     print("Checking F/T sensor:", ati_ft.daq_device.configU6()["SerialNumber"])
     print(ati_ft.__str__())
     ati_ft.calibration()  # output

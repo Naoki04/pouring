@@ -17,6 +17,21 @@ DAQ_STATE = True  # make sure daq is connected
 # calibration_flag = 0 #for first time run
 # ref_weight=10 #arbitrary high start point
 
+# Calibration Matrix
+userAxis_FT35016 = [[-1.54898,   0.18846,   5.89676, -48.38977,  -3.04654, 46.30090],
+                    [-7.14653,  55.02803,   0.49310, -28.03857,   4.42144, -26.78444],
+                    [69.40862,   1.66791,  69.83037,   2.80683,  65.97221,   2.30815],
+                    [-0.06111,   0.38902,  -1.11337,  -0.24520,   1.12728,  -0.14797],
+                    [1.27340,  0.04066,  -0.69535,   0.31133,  -0.58715,  -0.34969],
+                    [0.10451,  -0.70844,   0.08499,  -0.71084,   0.03483,  -0.68398]]
+
+userAxis_FT39618 = [[0.10637,   0.15082,   0.84226, -47.59016,  -2.33338,  46.92289],
+                    [-1.65879,  54.50407,  -0.30286, -27.29815,   2.24086, -27.29474],
+                    [68.34407,   0.01998,  68.06972,  -1.13757,  67.31363,  -0.56394],
+                    [-0.02662,   0.37852,  -1.09765,  -0.17944,   1.10550,  -0.19462],
+                    [1.25787,   0.00304,  -0.66846,   0.34352,  -0.59604,  -0.32462],
+                    [0.02203,  -0.70100,   0.02946,  -0.69473,   0.01725,  -0.70367]]
+
 class ATI_readings:
     # using labjack u6
 
@@ -37,7 +52,7 @@ class ATI_readings:
         self.margin = 0.1  # current threshold: 10grams
         self.GR_flag = 0  # to cehck if we are grabbing or releasing
         self.bias = [-0.28026725005202024, -0.5628451798374954, 0.36969605272634, -0.021619200849272602, -0.1790193724709752, 0.2219047680659969]
-        
+        self.userAxis = kwargs['userAxis']
 
     def __str__(self):
         printOut = '''
@@ -66,12 +81,7 @@ class ATI_readings:
     def convertingRawData(self):
         # from FTxx.cal available on ATI website
         # FT35016
-        userAxis = [[-1.54898,   0.18846,   5.89676, -48.38977,  -3.04654, 46.30090],
-                    [-7.14653,  55.02803,   0.49310, -28.03857,   4.42144, -26.78444],
-                    [69.40862,   1.66791,  69.83037,   2.80683,  65.97221,   2.30815],
-                    [-0.06111,   0.38902,  -1.11337,  -0.24520,   1.12728,  -0.14797],
-                    [1.27340,  0.04066,  -0.69535,   0.31133,  -0.58715,  -0.34969],
-                    [0.10451,  -0.70844,   0.08499,  -0.71084,   0.03483,  -0.68398]]
+        userAxis = self.userAxis
 
 
         offSetCorrection = self.rawData - numpy.transpose(self.bias)
@@ -229,7 +239,7 @@ Execute
 """
 if __name__ == '__main__':
     # ft setup
-    ati_ft = ATI_readings(resolutionIndex=1, gainIndex=0, settlingFactor=0, differential=True, serial=360022506) # weight:360022506, in-whist:360023125
+    ati_ft = ATI_readings(resolutionIndex=1, gainIndex=0, settlingFactor=0, differential=True, serial=360022506, userAxis=userAxis_FT39618) # weight:360022506,FT39618, in-whist:360023125,FT35016
     #print(ati_ft.daq_device.configU6())
     print("Checking F/T sensor:")
     print(ati_ft.__str__())
