@@ -11,10 +11,12 @@ from tqdm import tqdm
 import threading
 import csv
 
+from circular_trajectory import positions as trajectory
 
 from cri.robot import SyncRobot, AsyncRobot
 from cri.controller import RTDEController
 from robotiqGripper import RobotiqGripper
+from matplotlib import pyplot as plt
 
 import importlib
 ftsensor = importlib.import_module("force-torque-sensor")
@@ -196,7 +198,7 @@ def main():
         robot.move_linear((0, -160, -100, 0, 0, 0))
 
         # Pouring Point
-        pouring_point = (50, 60, 30, 0, 0, 0)
+        pouring_point = (70, 60, 30, 0, 0, 0)#(50, 60, 30, 0, 0, 0)
         robot.move_linear(pouring_point) # 奥_手前, 右_左, 下_上
 
 
@@ -205,20 +207,29 @@ def main():
         """
         realtime_plot1d.update(weight)
         robot.angular_speed = 1000
-        robot.move_joints(robot.joint_angles + [0,0,0,0,0,-45])
+        initial_theta = 45
+        robot.move_linear((pouring_point[0], pouring_point[1], pouring_point[2], 0, +initial_theta, 0))
         
 
         pouring_flag = True
-
+        pour_started_flag = False
 
         e = target_w - weight # Current error
         e1 = target_w - weight # Previous error
         ei = 0 # error before previous error
 
+        robot.blend_radius = 5
+        global trajectory
+        trajectory_index = 0
+        theta = initial_theta
+        robot.linear_speed = 50
+        real_path = []
         
+        pre_weight = weight
         try: 
             while(pouring_flag):
-                realtime_plot1d.update(weight)
+                realtime_plot1d.update(weight) #weight
+                pre_weight = weight
                 # Get weight
                 e = target_w - weight
                 ei += e
@@ -228,12 +239,33 @@ def main():
                     print("POSE LIMITATION")
                     print(d_theta)
                     break
-                robot.move_joints(robot.joint_angles + [0,0,0,0,0,-d_theta])
-                #controller.move_linear_velocity((0, 0, 0, -d_theta, 0, 0), 1000, 0.2)
-                print(d_theta, robot.pose[3])
+                target = trajectory[trajectory_index]
+                
+                theta += d_theta
+
+                if weight >= 5:
+                    pour_started_flag = True
+
+                if pour_started_flag == False:
+                    target = [0, 0]
+                    trajectory_index -= 1
+
+                target[0] += pouring_point[0]
+                target[1] += pouring_point[1]
+                
+                print("goal", (target[0], target[1], pouring_point[2], 0, theta, 0))
+                
+                robot.move_linear((target[0], target[1], pouring_point[2], 0, theta, 0))
+                
+                print("theta", theta, "real", robot.pose[4])
                 realtime_plot1d.update(weight)
+
+                trajectory_index += 1
+                real_path.append([robot.pose[0], robot.pose[1]])
                 
                 e1 = e
+
+                print("---")
                 
                 
                 if weight >= target_w:
@@ -242,9 +274,14 @@ def main():
                 if abs(robot.pose[3]) >= angle_limit:
                     pouring_flag = False
                     print("POSE LIMITATION")
+                if trajectory_index == trajectory.shape[0]-1:
+                    pouring_flag = False
+                    print("End of Trajectory")
+                    
 
         except KeyboardInterrupt:
              # Grasp Back
+            robot.blend_radius = 0
             robot.angular_speed = 10
             robot.move_linear(pouring_point)
             robot.move_linear((80, 70, 0, 0, 0, 0))
@@ -257,6 +294,12 @@ def main():
             robot.move_linear((0, 0, 0, 0, 0, 0))
 
             return KeyboardInterrupt
+        
+        print(real_path)
+        real_x = [path[0] for path in real_path]
+        real_y = [path[1] for path in real_path]
+        plt.plot(real_x, real_y)
+        plt.show()
             
             
         
@@ -268,6 +311,7 @@ def main():
         Return to status quo
         """
         # Grasp Back
+        robot.blend_radius = 0
         robot.move_linear((0, -160, -100, 0, 0, 0))
         robot.linear_speed = 20
         robot.move_linear((0, -160, 0, 0, 0, 0))
@@ -282,5 +326,5 @@ def main():
 
      
 if __name__ == '__main__':
-    ft_warmup(minutes=180,show=2,save=True) #1h~2h(1.5h) # show=0:don't show, show=1:show weight, show=2:show inwhist
+    #ft_warmup(minutes=180,show=2,save=True) #1h~2h(1.5h) # show=0:don't show, show=1:show weight, show=2:show inwhist
     main()

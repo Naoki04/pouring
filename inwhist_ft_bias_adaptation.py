@@ -16,25 +16,37 @@ from cri.robot import SyncRobot, AsyncRobot
 from cri.controller import RTDEController
 from robotiqGripper import RobotiqGripper
 
+from bias import read_bias_table, find_bias
+
 import importlib
 ftsensor = importlib.import_module("force-torque-sensor")
 ATI_readings = ftsensor.ATI_readings
 userAxis_FT35016 = ftsensor.userAxis_FT35016
 
+RealtimePlot1D = ftsensor.RealtimePlot1D
 
 theta_min = -90
 theta_max = 90
 gripper_pos = 0
-csv_path = "data/csv/" + time.strftime("%Y%m%d_%H%M%S") + "inwhist_calibration.csv"
-
 g = 9.80665
 
+csv_file = "data/csv/save/20230518_152715inwhist_calibration.csv"
+
+
 def main():
+
+    # Bias table
+    bias_table = read_bias_table(csv_file)
+
     # Inwhist FTsensor setup
     ati_ft = ATI_readings(resolutionIndex=1, gainIndex=0, settlingFactor=0, differential=True, serial=360023125, userAxis=userAxis_FT35016) # weight:360022506, in-whist:360023125)
     print("Checking F/T sensor:", ati_ft.daq_device.configU6()["SerialNumber"])
     print(ati_ft.__str__())
-    ati_ft.calibration()  # output
+
+    # Graph
+    x_tick = 1  # 時間方向の間隔
+    length = 200  # プロットする配列の要素数
+    realtime_plot1d = RealtimePlot1D(x_tick, length)
 
     # Robot setup
     base_frame = (0, 0, 0, 0, 0, 0)
@@ -78,11 +90,15 @@ def main():
 
         grip.activate()
         grip.printInfo()
+        print("SET OBJECT!!")
+        time.sleep(3)
         grip.goTo(gripper_pos)
+
+        ati_ft.calibration()  # output
 
         
         """
-        Data collection
+        Measure
         """
         theta = theta_min
 
@@ -91,31 +107,34 @@ def main():
         target = original_angle.copy() - [0,0,0,0,0,theta_min]
         robot.move_joints(target)
 
-        with open(csv_path, 'w', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow(["theta", "In-whist bias(g)"])
-            with tqdm(total=theta_max-theta_min) as pbar:
+        
+        with tqdm(total=theta_max-theta_min) as pbar:
 
-                while theta < theta_max:
-                    time.sleep(5)
-                    # thetaの取得
-                    real_theta = robot.joint_angles[5]
-                    # Calibrationの取得
-                    ati_ft.calibration()
-                    bias = ati_ft.bias
-                    # biasの保存
-                    writer.writerow([real_theta, bias])
-                    # weightの確認
-                    ati_ft.get_weight()
-                    print(ati_ft.forces/g*1000)
-                    print((ati_ft.forces[0]**2 + ati_ft.forces[1]**2 + ati_ft.forces[2]**2)**(1/2) /g *1000)
-                    # thetaの更新
-                    theta += 1
-                    target = original_angle.copy() - [0,0,0,0,0,theta]
-                    robot.move_joints(target)
-                    robot.move_joints(target)
+            while theta < theta_max:
+                time.sleep(3)
+                # thetaの取得
+                real_theta = robot.joint_angles[5]
+                
+                # biasの呼び出し
+                bias = find_bias(bias_table, real_theta)
 
-                    pbar.update(1)
+                # biasの更新
+                ati_ft.bias = bias
+                print(real_theta, ati_ft.bias)
+
+                # 重量計算
+                ati_ft.get_weight()
+                res_weight = (ati_ft.forces[0]**2 + ati_ft.forces[1]**2 + ati_ft.forces[2]**2)**(1/2) /g *1000
+                realtime_plot1d.update(res_weight)
+                
+                # thetaの更新
+                theta += 1
+                target = original_angle.copy() - [0,0,0,0,0,theta]
+                robot.move_joints(target)
+                robot.move_joints(target)
+
+                pbar.update(1)
+                
 
 if __name__ == "__main__":
     main()
